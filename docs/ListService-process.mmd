@@ -1,0 +1,30 @@
+sequenceDiagram
+
+    title: ListService `process()` Sequence Flow
+
+    participant lh as Lambda Handler
+    participant l as ListService
+    participant ddbu as DynamoDBUtils
+    participant ddb as DynamoDB
+
+    lh->>+l: process<br/>(tags?,paginationKey?,count?)
+
+    alt tags provided
+    
+        l->>+l: listIds()
+        note right of l: Refer to `listIds()` sequence diagram
+        l-->>-l: [taskIds, paginationKey]
+
+        opt taskids.length > 0
+            l->>+l: getItemsFromDb()
+            note right of l: Refer to `getItemsFromDb()` sequence diagram
+            l-->>-l: tasks
+        end
+        
+    else no tags provided
+        l->>+l: listItemsFromDb()
+        note right of l: Refer to `listItemsFromDb()` section within `listIds()` sequence diagram
+        l-->>-l: [tasks, paginationKey]
+    end
+
+    l-->>-lh: [tasks, paginationKey]

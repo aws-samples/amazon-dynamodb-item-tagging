@@ -1,0 +1,38 @@
+sequenceDiagram
+
+    title: ListService `getItemsFromDb()` Sequence Flow
+
+    participant l1 as ListService
+    participant l2 as ListService
+    participant ddbu as DynamoDBUtils
+    participant ddb as DynamoDB
+
+    l1->>+l2: getItemsFromDb(taskIds)
+
+    l2->>+ddbu: batchGetAll(params)
+
+    note right of ddbu: DynamoDB batchGet call has max limit of 25 items per request, therefore chunk these
+    ddbu->>+ddbu: splitBatchGetIntoChunks(params)
+    ddbu-->>-ddbu: chunks
+
+    note right of ddbu: now process each chunk, including retries on failed items...
+    loop each chunk
+
+        ddbu->>+ddb: results = ddb:batchGet(chunk)
+        ddb-->>-ddbu: results
+
+        ddbu->>+ddbu: mergeBatchGetOutput(overallResults, chunkResults)
+        ddbu-->>-ddbu: overallResults
+
+        opt has unprocessed keys?
+            note right of ddbu: recursive retry until hit max retry limit
+            ddbu->>+ddbu: retriedResults = batchGetAll(params)
+            ddbu-->>-ddbu: retriedResults
+            ddbu->>+ddbu: mergeBatchGetOutput(overallResults, retriedResults)
+            ddbu-->>-ddbu: overallResults
+        end
+    end
+
+    ddbu-->>-l2: overallResults
+
+    l2-->>-l1: items

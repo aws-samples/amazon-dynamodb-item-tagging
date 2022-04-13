@@ -1,0 +1,38 @@
+{
+  "name": "dynamodb-item-tagging",
+  "version": "0.1.0",
+  "bin": {
+    "dynamodb-item-tagging": "dist/infra/dynamodb-item-tagging.js"
+  },
+  "scripts": {
+    "lint": "eslint . --ext '.ts'",
+    "build": "tsc -b",
+    "test": "jest",
+    "cdk": "cdk"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "2.12.0",
+    "aws-lambda": "^1.0.7",
+    "constructs": "^10.0.111",
+    "ow": "^0.28.1",
+    "short-unique-id": "^4.4.4",
+    "source-map-support": "^0.5.16"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.93",
+    "@types/jest": "^26.0.10",
+    "@types/node": "10.17.27",
+    "@typescript-eslint/eslint-plugin": "4.23.0",
+    "@typescript-eslint/parser": "4.23.0",
+    "aws-cdk": "2.12.0",
+    "eslint": "7.26.0",
+    "jest-create-mock-instance": "1.1.0",
+    "jest-haste-map": "26.6.2",
+    "jest-mock-extended": "1.0.14",
+    "jest-mock": "26.6.2",
+    "jest-resolve": "26.6.2",
+    "jest": "26.6.3",
+    "ts-jest": "26.5.6",
+    "typescript": "4.2.4"
+  }
+}
