@@ -1,3 +1,8 @@
+/*!
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT-0
+*/
+
 import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import ow from 'ow';
 import ShortUniqueId from 'short-unique-id';

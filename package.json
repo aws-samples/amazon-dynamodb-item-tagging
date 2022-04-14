@@ -1,6 +1,7 @@
 {
   "name": "dynamodb-item-tagging",
   "version": "0.1.0",
+  "license": "MIT-0",
   "bin": {
     "dynamodb-item-tagging": "dist/infra/dynamodb-item-tagging.js"
   },
