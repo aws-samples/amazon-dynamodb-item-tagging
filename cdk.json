@@ -1,5 +1,5 @@
 {
-  "app": "npx ts-node --prefer-ts-exts src/infra/dynamodb-item-tagging.ts",
+  "app": "npx ts-node --prefer-ts-exts src/infra/amazon-dynamodb-item-tagging.ts",
   "watch": {
     "include": [
       "**"

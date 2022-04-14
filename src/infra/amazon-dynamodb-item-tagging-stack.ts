@@ -86,8 +86,8 @@ export class DynamodbItemTaggingStack extends Stack {
     table.grantReadData(listTasksLambda);
 
     // define the API Gateway
-    const api = new RestApi(this, 'dynamodb-item-tagging-api', {
-      description: 'dynamodb item tagging api',
+    const api = new RestApi(this, 'amazon-dynamodb-item-tagging-api', {
+      description: 'Amazon DynamoDB Item Tagging API',
       deployOptions: {
         stageName: 'prod',
       },

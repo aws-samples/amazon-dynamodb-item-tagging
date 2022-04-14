@@ -1,4 +1,4 @@
-# dynamodb-item-tagging
+# Amazon DynamoDB Item Tagging
 
 ## Summary
 
@@ -26,17 +26,18 @@ What is relevant here is the `tags` property. In our application we allow its us
 * An active AWS account
 * [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) installed, with credential configured using `aws configure`
 * Node.js v14. It is recommended to install and use [nvm](https://github.com/nvm-sh/nvm) to manage multiple versions of node.js
-* Install CDK using `npm install -g aws-cdk`
+* Install AWS CDK using `npm install -g aws-cdk`
+* Docker (required by AWS CDK)
 
 ## Architecture
 
 ![architecture](docs/images/architecture.png)
 
-The infrastructure that is deployed as part of this pattern is relatively simple: an *API Gateway* proxies a `POST /tasks` REST API to a *Lambda* function to save a task to *DynamoDB*. Likewise, *API Gateway* proxies a `GET /tasks` REST API to another *Lambda* function that handles the querying of data. The complexity involved with this pattern is in the implementation of the querying logic carried out as part of the *List Items Lambda* function.
+The infrastructure that is deployed as part of this pattern is relatively simple: an *Amazon API Gateway* proxies a `POST /tasks` REST API to a *AWS Lambda* function to save a task to *Amazon DynamoDB*. Likewise, *Amazon API Gateway* proxies a `GET /tasks` REST API to another *AWS Lambda* function that handles the querying of data. The complexity involved with this pattern is in the implementation of the querying logic carried out as part of the *List Items AWS Lambda* function.
 
 ## Database Table Design
 
-* We take the approach of using a single DynamoDB table to store all data for the application.
+* We take the approach of using a single Amazon DynamoDB table to store all data for the application.
 * To facilitate querying items by any user defined tags, we use the [Adjacency List design pattern](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-adjacency-graphs.html#bp-adjacency-lists) to store both task and tags data as separate items in the same table.
 * [Composite sort keys](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-sort-keys.html) are used to allow efficient querying of tag values.
 * A single [sparse index](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-indexes-general-sparse-indexes.html) allows querying all task items when no filtering by tags has been requested.
@@ -63,10 +64,10 @@ Attribute name | Attribute type | Example
 
 **Global Secondary Index**
 
-A sparse GSI (named `siKey1-sk-index` exists with partition key `siKey1` and sort key `sk` and a projection type of `ALL` (refer to `src/infra/dynamodb-item-tagging-stack.ts` for further details). 
+A sparse GSI (named `siKey1-sk-index` exists with partition key `siKey1` and sort key `sk` and a projection type of `ALL` (refer to `src/infra/amazon-dynamodb-item-tagging-stack.ts` for further details). 
 
 **Sample data**
-Taking the sample task item as listed in the summary, we store this as 4 separate items within the DynamoDB table as follows (refer to `src/lambda/create.ts` for further details on the implementation):
+Taking the sample task item as listed in the summary, we store this as 4 separate items within the Amazon DynamoDB table as follows (refer to `src/lambda/create.ts` for further details on the implementation):
 
 pk (partition key) | sk (sort key) | siKey1 | name | description | done | tags
 ---|---|---|---|---|---|---
@@ -82,8 +83,8 @@ The code files of interest are:
 ```
 src/                                        // source code
 ├── infra/                                  // infrastructure as code (cdk)
-│   └── dynamodb-item-tagging-stack.ts      // stack implementation
-│   └── dynamodb-item-tagging.spec.ts       // stack tests
+│   └── amazon-dynamodb-item-tagging-stack.ts      // stack implementation
+│   └── amazon-dynamodb-item-tagging-.spec.ts       // stack tests
 ├── lambda/                                 // lambda functions
 │   └── create.ts                           // create task code
 │   └── create.spec.ts                      // create tasks tests
@@ -100,7 +101,7 @@ src/                                        // source code
 
 The code for creating tasks as described in the *Database table design* section is contained within the `CreateService process(item:TaskItem)` function located in `src/lambda/create.ts`. 
 
-This class/method is wrapped by the lambda handler defined in `src/create.handler.ts` and is invoked by the *API Gateway* proxy to the *Lambda* function as defined in `src/infra/dynamodb-item-tagging-stack.ts`. The lambda handler takes the raw `APIGatewayEvent` object and invokes the `process` method with the extracted methods.
+This class/method is wrapped by the lambda handler defined in `src/create.handler.ts` and is invoked by the *API Gateway* proxy to the *Lambda* function as defined in `src/infra/amazon-dynamodb-item-tagging-stack.ts`. The lambda handler takes the raw `APIGatewayEvent` object and invokes the `process` method with the extracted methods.
 
 The `CreateService` class is separated from the lambda handler to allow for unit testing (refer to `src/lambda/create.spec.ts`).
 

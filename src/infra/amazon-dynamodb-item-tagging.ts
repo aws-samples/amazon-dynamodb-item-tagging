@@ -7,7 +7,7 @@
 
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import { DynamodbItemTaggingStack } from './dynamodb-item-tagging-stack';
+import { DynamodbItemTaggingStack } from './amazon-dynamodb-item-tagging-stack';
 
 const app = new cdk.App();
 new DynamodbItemTaggingStack(app, 'DynamodbItemTaggingStack', {
