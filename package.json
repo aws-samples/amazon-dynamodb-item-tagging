@@ -26,6 +26,7 @@
     "@typescript-eslint/eslint-plugin": "4.23.0",
     "@typescript-eslint/parser": "4.23.0",
     "aws-cdk": "2.12.0",
+    "cdk-nag": "2.12.44",
     "eslint": "7.26.0",
     "jest-create-mock-instance": "1.1.0",
     "jest-haste-map": "26.6.2",

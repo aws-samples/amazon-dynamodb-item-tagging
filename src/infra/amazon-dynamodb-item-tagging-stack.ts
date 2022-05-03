@@ -4,12 +4,13 @@
 */
 
 import { Duration, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
-import { Cors, EndpointType, LambdaIntegration, RestApi } from 'aws-cdk-lib/aws-apigateway';
+import { AccessLogFormat, Cors, EndpointType, LambdaIntegration, LogGroupLogDestination, MethodLoggingLevel, RestApi } from 'aws-cdk-lib/aws-apigateway';
 import {
     AttributeType, BillingMode, ProjectionType, Table, TableEncryption
 } from 'aws-cdk-lib/aws-dynamodb';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
+import { LogGroup } from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import path from 'path';
 
@@ -62,7 +63,7 @@ export class DynamodbItemTaggingStack extends Stack {
       bundling: {
         minify: true,
         externalModules: ['aws-sdk'],
-      },
+      }
     });
 
     // define the lambda function to list existing tasks
@@ -84,23 +85,26 @@ export class DynamodbItemTaggingStack extends Stack {
     // grant the lambda functions access to the table
     table.grantWriteData(createTaskLambda);
     table.grantReadData(listTasksLambda);
-
     // define the API Gateway
+    const logGroup = new LogGroup(this, 'DynamoDBItemTaggingLogs');
     const api = new RestApi(this, 'amazon-dynamodb-item-tagging-api', {
       description: 'Amazon DynamoDB Item Tagging API',
       deployOptions: {
         stageName: 'prod',
+        accessLogDestination: new LogGroupLogDestination(logGroup),
+        accessLogFormat: AccessLogFormat.jsonWithStandardFields(),
+        loggingLevel: MethodLoggingLevel.INFO,
       },
       defaultCorsPreflightOptions: {
         allowOrigins: Cors.ALL_ORIGINS,
       },
-      endpointTypes: [EndpointType.REGIONAL],
+      endpointTypes: [EndpointType.REGIONAL]
     });
 
     // define the rest api endpoints to proxy through to the lambda functions
     const tasksResource = api.root.addResource('tasks');
-    tasksResource.addMethod('POST', new LambdaIntegration(createTaskLambda, {proxy: true}));
-    tasksResource.addMethod('GET', new LambdaIntegration(listTasksLambda, {proxy: true}));
+    tasksResource.addMethod('POST', new LambdaIntegration(createTaskLambda, {proxy: true}), {apiKeyRequired: true});
+    tasksResource.addMethod('GET', new LambdaIntegration(listTasksLambda, {proxy: true}), {apiKeyRequired: true});
 
   }
 }
