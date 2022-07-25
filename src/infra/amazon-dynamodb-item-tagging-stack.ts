@@ -54,7 +54,7 @@ export class DynamodbItemTaggingStack extends Stack {
     const createTaskLambda = new NodejsFunction(this, 'createTask', {
       memorySize: 256,
       timeout: Duration.seconds(5),
-      runtime: Runtime.NODEJS_14_X,
+      runtime: Runtime.NODEJS_16_X,
       handler: 'handler',
       entry: path.join(__dirname, `/../lambda/create.handler.ts`),
       environment: {
@@ -70,7 +70,7 @@ export class DynamodbItemTaggingStack extends Stack {
     const listTasksLambda = new NodejsFunction(this, 'listTasks', {
       memorySize: 256,
       timeout: Duration.seconds(29),
-      runtime: Runtime.NODEJS_14_X,
+      runtime: Runtime.NODEJS_16_X,
       handler: 'handler',
       entry: path.join(__dirname, `/../lambda/list.handler.ts`),
       environment: {

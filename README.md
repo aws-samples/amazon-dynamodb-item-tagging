@@ -112,11 +112,182 @@ Similar to the create tasks logic, the listing of tasks is implemented in the `L
 
 Finding tasks that match all requested (user defined) tags is not (efficiently or cost effectively) possible in a single query using DynamoDB. Instead we need to query the table for all tasks per each filter, then attempt to find matching tasks across those different result sets at the application layer before returning the final result set. Along the way we may need to obtain the next page of results for any of the provided tags if the requested page size is greater than the number of tasks accumulated so far. The following sequence diagrams illustrate the process that allows this to be done in an efficient and scalable manner:
 
-![ListService-process](docs/images/ListService-process.svg)
+```mermaid
+sequenceDiagram
 
-![ListService-listIds](docs/images/ListService-listIds.svg)
+    title: ListService `process()` Sequence Flow
 
-![ListService-getItemsFromDb](docs/images/ListService-getItemsFromDb.svg)
+    participant lh as Lambda Handler
+    participant l as ListService
+    participant ddbu as DynamoDBUtils
+    participant ddb as DynamoDB
+
+    lh->>+l: process<br/>(tags?,paginationKey?,count?)
+
+    alt tags provided
+    
+        l->>+l: listIds()
+        note right of l: Refer to `listIds()` sequence diagram
+        l-->>-l: [taskIds, paginationKey]
+
+        opt taskids.length > 0
+            l->>+l: getItemsFromDb()
+            note right of l: Refer to `getItemsFromDb()` sequence diagram
+            l-->>-l: tasks
+        end
+        
+    else no tags provided
+        l->>+l: listItemsFromDb()
+        note right of l: Refer to `listItemsFromDb()` section within `listIds()` sequence diagram
+        l-->>-l: [tasks, paginationKey]
+    end
+
+    l-->>-lh: [tasks, paginationKey]
+
+```
+
+```mermaid
+sequenceDiagram
+
+    title: ListService `listIds()` Sequence Flow
+
+    participant l1 as ListService
+    participant l2 as ListService
+    participant ddb as DynamoDB
+
+    l1->>+l2: listIds(tags,paginationKey,count)
+
+    par async task per tag
+        note right of l2: Retrieve the first page of task ids that match each tag
+        loop each tag
+            l2->>+l2: listIdsFromDbUsingTags<(tagKey,tagValue,tagPaginationKey,count)
+            note right of l2: Refer to `listIdsFromDbUsingTags()` section below
+            l2-->>-l2: task ids
+        end
+    end
+
+    note right of l1: if any of the initial results are empty, then we can exit<br/>immediately as there are no common matches across all requested tags
+    loop each tag
+        opt no task ids
+            l2-->>l1: [undefined, undefined]
+        end
+    end
+
+    note right of l2: initialize a set of pointers that tracks the current position of each tags page of results
+    l2->>l2: initialize pointers
+    note right of l2: loop through each page of results per tag looking for task ids that are found across
+    loop more item ids still to process and found items < requested count
+        loop each tag index
+            note right of l2: retrieve the next task id for the current tag to process
+            l2->>+l2: currentTagTaskItemId = getNextItemIdFromResults(tagIndex)
+            note right of l2: Refer to `getNextPageOfResults(tagIndex)` section below
+            l2-->>-l2: task id
+
+            alt tag index === last tag index
+                note right of l2: if we reach here it means we found a task id that was matched across all tags
+                l2->>l2: add currentTagTaskItemId to results
+                l2->>l2: increment all the pointers to reference the next result for each tag
+
+            else tag index < last tag index
+                note right of l2: check for matching task ids between this and the next tag to be compared
+                l2->>+l2: nextTagTaskItemId = getNextItemIdFromResults(tagIndex)
+                note right of l2: Refer to `getNextPageOfResults(tagIndex)` section below
+                l2-->>-l2: task id
+
+                alt currentTagTaskItemId === nextTagTaskItemId
+                    note right of l2: we have a match across the tag pair being checked, so lets move onto checking the next tag pair
+                    l2-->>l2: continue loop
+
+                else currentTagTaskItemId < nextTagTaskItemId
+                    note right of l2: this tag has a lower task id, therefore increment the pointer for the current tag and restart the matching flow
+                    l2-->>l2: increment pointer of current tag
+                    l2-->>l2: break loop
+
+                else currentTagTaskItemId > nextTagTaskItemId
+                    note right of l2: this tag has a higher task id, therefore increment the pointer for the next tag and restart the matching flow
+                    l2-->>l2: increment pointer of next tag
+                    l2-->>l2: break loop
+
+                end
+
+            end
+        end
+    end
+
+    l2-->>-l1: [taskIds, paginationKey]
+
+    note right of l1: ~~~<br/>`getNextPageOfResults(tagIndex)` sequence flow<br/>~~~
+    rect rgb(227, 211, 175)
+        l1->>+l2: getNextItemIdFromResults(tagIndex)
+        opt no more task ids in current page of results
+            l2->>+l2: getNextPageOfResults(tagIndex)
+            l2->>+l2: listIdsFromDbUsingTags(tagKey,tagValue,paginationKey,count)
+            note right of l2: Refer to `listIdsFromDbUsingTags()` section below
+            l2-->>-l2: task ids
+            l2-->>-l2: has results?
+        end
+        l2-->>-l1: task id
+        opt no next task id for current tag
+            note right of l1: stop processing
+        end
+    end 
+
+    note right of l1: ~~~<br/>`listIdsFromDbUsingTags(tagName,tagValue,exclusiveStart?,count?)` sequence flow<br/>~~~
+    rect rgb(175, 227, 178)
+
+        l1->>+l2: listIdsFromDbUsingTags<br/>(tagName,tagValue,exclusiveStart?,count?)
+
+        l2->>+ddb:query(params)
+        ddb-->>-l2: items
+
+        l2->>l2: extract task ids
+
+        l2-->>-l1: [taskIds, paginationKey]
+    end
+
+```
+
+```mermaid
+sequenceDiagram
+
+    title: ListService `getItemsFromDb()` Sequence Flow
+
+    participant l1 as ListService
+    participant l2 as ListService
+    participant ddbu as DynamoDBUtils
+    participant ddb as DynamoDB
+
+    l1->>+l2: getItemsFromDb(taskIds)
+
+    l2->>+ddbu: batchGetAll(params)
+
+    note right of ddbu: DynamoDB batchGet call has max limit of 25 items per request, therefore chunk these
+    ddbu->>+ddbu: splitBatchGetIntoChunks(params)
+    ddbu-->>-ddbu: chunks
+
+    note right of ddbu: now process each chunk, including retries on failed items...
+    loop each chunk
+
+        ddbu->>+ddb: results = ddb:batchGet(chunk)
+        ddb-->>-ddbu: results
+
+        ddbu->>+ddbu: mergeBatchGetOutput(overallResults, chunkResults)
+        ddbu-->>-ddbu: overallResults
+
+        opt has unprocessed keys?
+            note right of ddbu: recursive retry until hit max retry limit
+            ddbu->>+ddbu: retriedResults = batchGetAll(params)
+            ddbu-->>-ddbu: retriedResults
+            ddbu->>+ddbu: mergeBatchGetOutput(overallResults, retriedResults)
+            ddbu-->>-ddbu: overallResults
+        end
+    end
+
+    ddbu-->>-l2: overallResults
+
+    l2-->>-l1: items
+
+```
 
 
 ## Limitations
