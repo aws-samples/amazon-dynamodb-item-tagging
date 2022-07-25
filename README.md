@@ -25,7 +25,7 @@ What is relevant here is the `tags` property. In our application we allow its us
 
 * An active AWS account
 * [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) installed, with credential configured using `aws configure`
-* Node.js v14. It is recommended to install and use [nvm](https://github.com/nvm-sh/nvm) to manage multiple versions of node.js
+* Node.js v16. It is recommended to install and use [nvm](https://github.com/nvm-sh/nvm) to manage multiple versions of node.js
 * Install AWS CDK using `npm install -g aws-cdk`
 * Docker (required by AWS CDK)
 
