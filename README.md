@@ -161,8 +161,8 @@ Both best and worst case scenarios of instead searching just using the composite
 
 * Ensure all [prerequisites](#prerequisites) are met
 * Clone this repository, and `cd` into its directory
-* Build the application using `npm run build`
-* Deploy the application using `cdk deploy --outputs-file ./cdk-outputs.json`
+* Build the application using `npm install && npm run build`
+* Deploy the application using `npx cdk deploy --outputs-file ./cdk-outputs.json`
 * Open `./cdk-outputs.json` and make a note of the  API Gateway URL where the application's REST API is deployed
 * The following is an example of how to create new tasks
 
@@ -230,6 +230,7 @@ Response Body:
 
 ## Useful commands
 
+ * `npm install`     install the node.js dependencies
  * `npm run build`   compile typescript to js
  * `npm run lint`    lint the code
  * `npm run test`    perform the jest unit tests
